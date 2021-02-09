@@ -1,13 +1,21 @@
 import praw
 import nltk
+import csv
+import os
 #nltk.download()  #nead to uncomment this nltk.download to download the language packs (I downloaded all of them)
 from nltk.corpus import stopwords
 from nltk import tokenize
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
+
 import pandas as pd
 from collections import Counter
 import matplotlib.pyplot as plt
+
+os.chdir(r"C:/Users/Joel/Documents/redditWatch") 
+
 
 
 #initialize reddit instance
@@ -22,29 +30,11 @@ print(reddit.read_only)
 ############################################################################
 
 
-
-#searches the newest 20 posts for posts with >20 upvotes, then all grabs words from the commenta section and adds them to giant list
-#init some lists
-allwords = []
-
 wsb = reddit.subreddit("wallstreetbets")
-count = 0
 
 
-sid = SentimentIntensityAnalyzer()
+#create list of sentences from WSB daily discussion thread
 sentences = []
-'''
-for a in wsb.search("What are your moves", limit=1):
-    print(a.title)
-    comments = a.comments
-    for com in comments:
-        string = str(com.body)
-        print(string)
-        lines_list = tokenize.sent_tokenize(string)
-        ss = sid.polarity_scores(lines_list)
-        for k in sorted(ss):
-            print('{0}: {1}, '.format(k, ss[k]), end='')
-'''
 with open('sentences.txt','w',encoding="utf-8",errors="ignore") as f:   
     for a in wsb.search("What are your moves", limit=1):
         print(a.title)
@@ -54,69 +44,98 @@ with open('sentences.txt','w',encoding="utf-8",errors="ignore") as f:
                 string = [com.body]
                 #print(string)
                 sentences.extend(string)
-for sen in sentences:
-    ss = sid.polarity_scores(sen)
-    print("begin new comment:")
-    print(sen)
-    for k in sorted(ss):
-        print('{0}: {1}, '.format(k, ss[k]), end='')
-    print("\n end of comment")
+
+#create list of companies and symbols from NYSE list found online
+companyList = []
+symbolList = []
+
+with open('stonks.csv') as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        name = [row[1]]
+        symbol = [row[0]]
+        companyList.extend(name)
+        symbolList.extend(symbol)
 
 
+#everytime a ticker is mentioned in WSB discussion thread, add to globalSyms. GlobalSyms is all the tickers mentioned, thus there are numerous duplicates.
+#duplicates are then counted to see most discussed symbols. If a stock symbol is mentioned in a sentence that is all (or mainly) capital letters, this is
+#referred to as a hype sentence. Tickers mentioned in hype sentences are added to globalHypes. This helps to filter out noise later, as many english words
+#become tickers when they are all caps, but real tickers will be mentioned in sentences that aren't hype as well as hype. 
 
-"""
+globalSyms = []
+globalNames = []
+globalHypes = []
+#Finds what the subject of the sentence is based on list of company names and list of symbols
+def whichStock(sentence):
+    matchedSymbols = []
+    matchedCompanies = []
+    text = tokenize.word_tokenize(sentence)
+    upperCaseCounter = 1
+    for word in text:
+        if word.isupper():
+            upperCaseCounter += 1
+        if word in symbolList:
+            index = symbolList.index(word)
+            matchedSymbols.extend([symbolList[index]])
+            matchedCompanies.extend([companyList[index]])
+        '''if len(w) > 4:
+            matchComp = process.extractOne(w,companyList)
+            lenRatio = len(matchComp[0])/len(w)
+            totalScore = matchComp[1]*lenRatio
+            string = "totalScore: " + totalScore + ", for company: " + matchComp[1] 
+            response += string'''
+    if upperCaseCounter/len(text) > 0.80: #check if this sentence is "hype af" (mainly uppercase letters)
+        globalHypes.extend(matchedSymbols)
+    globalSyms.extend(matchedSymbols)
+    globalNames.extend(matchedCompanies)
+    return matchedCompanies
 
-#with open('sentences.txt', 'w',encoding="utf-8",errors="ignore") as f:
-    #for item in sentences:
-        #f.write("%s\n" % item)
+
+#run all sentences through whichStock
+for i in sentences:
+    whichStock(i)
+
+#do a raw count
+symbolC = Counter()
+for d in globalSyms:
+    symbolC[d] += 1
+#raw plot
+dff = pd.DataFrame.from_dict(symbolC,orient='index')
+dff.plot(kind='bar')
+plt.savefig('preFiltered.pdf')
 
 
-    
-#from nltk import tokenize
-#lines_list = tokenize.sent_tokenize(paragraph)
-#sentences.extend(lines_list)
+###filtering around hype letters and mentions
+hypeC = Counter()
+for d in globalHypes:
+    hypeC[d] += 1
+tickers = hypeC.keys()
 
-sentences.extend(tricky_sentences)
-sid = SentimentIntensityAnalyzer()
-for sentence in sentences:
-    print(sentence)
-    ss = sid.polarity_scores(sentence)
-    for k in sorted(ss):
-        print('{0}: {1}, '.format(k, ss[k]), end='')
-    print()
+filteredTickers = []
+for i in tickers:
+    sumReg = symbolC.get(i)
+    sumHype = hypeC.get(i)
+    if sumHype/sumReg > 0.25:
+        filteredTickers.extend([i])
 
-print(tricky_sentences)"""
+print(filteredTickers)
 
-
-""" for i in wsb.new(limit=5):#for each post in New(limit to 30 posts)
-    count+=1
-    if (i.score>1):#if post has 20 or more upvotes
-        print("new post: ", i.title)  
-        forest = i.comments#get comments of the post
-        com = 0
-        for n in forest:#for each comment
-            #print("comment ", com, ": ", n.body)
-            strv = str(n.body).split()#get comment body and split
-            #listy = strv.split()
-            allwords.extend(strv)#extend allwords list to include text from comments
-            com += 1
-######################################################
-
-#tries to make a list of only useful words by sorting out "stopwords"
-usefulwords = []
-
-for word in allwords:
-    if word in stopwords.words('english'):
-        pass
-    else:
-        usefulwords.append(word)
-
-c = Counter()
-for d in usefulwords:
-    c[d] += 1
-print(c.most_common(20)) """#print 20 most common "useful words"
+#pop out hype only tickers
+for i in filteredTickers:
+    symbolC.pop(i)
+#pop out tickers with few mentions
+nnn = []
+for i in symbolC.keys():
+    mentions = symbolC.get(i)
+    if mentions < 3:
+        nnn.extend([i])
+for i in nnn:
+    symbolC.pop(i)
 
 #make a shitty bar plot
-#df = pd.DataFrame.from_dict(c,orient='index')
-#df.plot(kind='bar')
-#plt.show()
+df = pd.DataFrame.from_dict(symbolC,orient='index')
+df.plot(kind='bar')
+plt.savefig('Filtered.pdf')  
+
+
