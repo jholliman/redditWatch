@@ -2,7 +2,6 @@ import praw
 import nltk
 import csv
 import os
-#nltk.download()  #nead to uncomment this nltk.download to download the language packs (I downloaded all of them)
 from nltk.corpus import stopwords
 from nltk import tokenize
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -68,8 +67,12 @@ def hotTickers(sentences, nameOfSource):
     globalNames = []
     globalHypes = []
 
-    #takes one sentence and finds any symbols, company names, or hype names to populate the global arrays 
-    def whichStock(sentence):
+    #name for labelling plots
+    name = str(nameOfSource)
+
+    #run all sentences through whichStock
+    for sentence in sentences:
+        #takes one sentence and finds any symbols, company names, or hype names to populate the global arrays 
         matchedSymbols = []
         matchedCompanies = []
         text = tokenize.word_tokenize(sentence)
@@ -87,14 +90,6 @@ def hotTickers(sentences, nameOfSource):
             globalHypes.extend(matchedSymbols)
         globalSyms.extend(matchedSymbols)
         globalNames.extend(matchedCompanies)
-        return matchedCompanies
-
-    #name for labelling plots
-    name = str(nameOfSource)
-
-    #run all sentences through whichStock
-    for i in sentences:
-        whichStock(i)
 
     #do a raw count
     symbolC = Counter()
