@@ -1,9 +1,7 @@
 import praw
 import csv
 import os
-from nltk.corpus import stopwords
-from nltk import tokenize
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 import pandas as pd
@@ -44,17 +42,21 @@ lastClose = datetime.now() - timedelta(hours=24)
 
 # this is the main processing loop for submissions
 # this will iterate and filter sumissions, and then iterate through comments in that submission
-for submission in wsb.new(limit=200):
+for submission in wsb.new(limit=10):
     timePosted = datetime.utcfromtimestamp(submission.created)
     
     if (timePosted > lastClose):
         # FILTERING
-        if (Filter.submissionScore(submission, 2)): # reject score < 2
+        if (not Filter.minScore(submission, 2)): # reject score < 2
             continue
 
         # FLAGS
         isDailyDiscussion = (submission.link_flair_text == "Daily Discussion")
 
         for comment in submission.comments:
+            # FILTERING
+            if (not Filter.hasBody(comment)):
+                continue
+
             data.processSymbols(comment)
             

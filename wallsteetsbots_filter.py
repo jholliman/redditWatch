@@ -1,7 +1,8 @@
 import praw
 
 class Filter:
-	# filters will return True if they fail
+	def minScore(o, minScore):
+		return (o.score > minScore)
 
-	def submissionScore(submission, minScore):
-		return (submission.score < minScore)
+	def hasBody(o):
+		return (hasattr(o, 'body'))

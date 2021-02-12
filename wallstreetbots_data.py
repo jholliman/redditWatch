@@ -1,4 +1,9 @@
 import nltk
+from nltk.corpus import stopwords
+from nltk import tokenize
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+from datetime import datetime
 
 class Data:
 	# this is a dict of symbol: company name
@@ -42,7 +47,26 @@ class Data:
 	def processSymbols(self, comment):
 		tokenized = tokenize.word_tokenize(comment.body)
 
-		print(comment)
+		# comment date
+		dateString = datetime.utcfromtimestamp(comment.created).date().isoformat()
+
+		# process counts
+		for word in tokenized:
+			if (word in self.nyseSymbols.keys()):
+				# todo check nyseSymbols.values()
+				
+				# create symbol dict if doesnt exist
+				if word not in self.symbolCounts:
+					self.symbolCounts[word] = {}
+
+				# create date in symbol dict if doesnt exist
+				if dateString not in self.symbolCounts[word]:
+					self.symbolCounts[word][dateString] = 0
+
+				# add one to the count
+				self.symbolCounts[word][dateString] += 1
+
+		print(self.symbolCounts)
 
 	def debug(self):
 		print(self.nyseSymbols)
