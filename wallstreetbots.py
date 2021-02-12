@@ -2,12 +2,7 @@ import praw
 import csv
 import os
 
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
-import pandas as pd
-from collections import Counter
-import matplotlib.pyplot as plt
-from datetime import datetime, tzinfo, timedelta;
+from datetime import datetime, timedelta;
 
 from wallstreetbots_data import Data
 from wallsteetsbots_filter import Filter
@@ -29,23 +24,22 @@ with open('stonks.csv') as csv_file:
     for row in csv_reader:
         nyseSymbols[row[0]] = row[1]
 
+# create our data object and load it with the nyse symbols
 data = Data(nyseSymbols)
+# this is how you would load the existing database to add to
+# this is commented out for debug, because we have no way of checking if we're adding the same data again
+# data.load()
 ############################################################################
 
 
-# process submissions since last market close (4pm Eastern)
-# lastClose = datetime.now().replace(hour=16,minute=0,second=0,microsecond=0,tzinfo=tzinfo.tzname('US/Eastern'))
-# if (lastClose > datetime.now()):
-#    lastClose -= timedelta(hours=24);
-lastClose = datetime.now() - timedelta(hours=24)
-
+# only allow posts newer than 24hr ago
+startDateTime = (datetime.now() - timedelta(hours=24))
 
 # this is the main processing loop for submissions
-# this will iterate and filter sumissions, and then iterate through comments in that submission
-for submission in wsb.new(limit=10):
-    timePosted = datetime.utcfromtimestamp(submission.created)
+for submission in wsb.new(limit=100):
+    timePosted = datetime.utcfromtimestamp(submission.created_utc) - timedelta(hours=6) # utc -> central
     
-    if (timePosted > lastClose):
+    if (timePosted > startDateTime):
         # FILTERING
         if (not Filter.minScore(submission, 2)): # reject score < 2
             continue
@@ -59,4 +53,8 @@ for submission in wsb.new(limit=10):
                 continue
 
             data.processSymbols(comment)
-            
+
+data.save()
+symbolCounts = data.getHypeRemoved(data.symbolCounts, 0.2)
+symbolCounts = data.getMinCount(symbolCounts, 3)
+print(symbolCounts)

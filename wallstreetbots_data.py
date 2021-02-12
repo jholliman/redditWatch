@@ -1,72 +1,96 @@
-import nltk
-from nltk.corpus import stopwords
+import json
+
 from nltk import tokenize
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-from datetime import datetime
+from datetime import datetime, timedelta;
+
+from wallsteetsbots_filter import Filter
 
 class Data:
 	# this is a dict of symbol: company name
 	nyseSymbols = {}
 
-	#	'symbolCounts': {
-	#		'GME': {
-	#			'2020-01-22': 10,
-	#			'2020-01-23': 11
-	#			},
-	#		'AMC': {
-	#			'2020-01-22': 10,
-	#			'2020-01-23': 11
-	#			}
-	#		}
+	# actual data
 	symbolCounts = {}
-
-	
-	#	'symbolSentiments': {
-	#		'GME': {
-	#			'2020-01-22': 0.5,
-	#			'2020-01-23': 1.3
-	#			},
-	#		'AMC': {
-	#			'2020-01-22': 3.0,
-	#			'2020-01-23': 33.3
-	#			}
-	#		}
 	symbolSentiments = {}
+	symbolHype = {}
 
 
 	def __init__(self, nyseSymbols):
 		self.nyseSymbols = nyseSymbols
 
 	def load(self):
-		print('load')
+		with open('database.json', 'r') as f:
+			combinedObject = json.load(f)
+			self.symbolCounts = combinedObject['symbolCounts']
+			self.symbolSentiments = combinedObject['symbolSentiments']
+			self.symbolHype = combinedObject['symbolHype']
 
 	def save(self):
-		print('save')
+		combinedObject = {}
+		combinedObject['symbolCounts'] = self.symbolCounts
+		combinedObject['symbolSentiments'] = self.symbolSentiments
+		combinedObject['symbolHype'] = self.symbolHype
+		
+		with open('database.json', 'w') as f:
+			json.dump(combinedObject, f, indent=4)
+
+
+	# helper function for adding to the nested dicts
+	def feedSymbolDict(self, symbol, dateString, symbolDict, count=1):
+		# create symbol dict if doesnt exist
+		if symbol not in symbolDict:
+			symbolDict[symbol] = {}
+
+		# create date in symbol dict if doesnt exist
+		if dateString not in symbolDict[symbol]:
+			symbolDict[symbol][dateString] = 0
+
+		# add one to the count
+		symbolDict[symbol][dateString] += count
+
 
 	def processSymbols(self, comment):
 		tokenized = tokenize.word_tokenize(comment.body)
 
-		# comment date
-		dateString = datetime.utcfromtimestamp(comment.created).date().isoformat()
+		# comment date (todo localtime)
+		dateString = (datetime.utcfromtimestamp(comment.created_utc) - timedelta(hours=6)).date().isoformat()
+
+		# is all caps?
+		hype = Filter.isCaps(comment.body, 0.8)
 
 		# process counts
 		for word in tokenized:
 			if (word in self.nyseSymbols.keys()):
-				# todo check nyseSymbols.values()
-				
-				# create symbol dict if doesnt exist
-				if word not in self.symbolCounts:
-					self.symbolCounts[word] = {}
+				self.feedSymbolDict(word, dateString, self.symbolCounts)
 
-				# create date in symbol dict if doesnt exist
-				if dateString not in self.symbolCounts[word]:
-					self.symbolCounts[word][dateString] = 0
+				if hype:
+					self.feedSymbolDict(word, dateString, self.symbolHype)
 
-				# add one to the count
-				self.symbolCounts[word][dateString] += 1
 
-		print(self.symbolCounts)
+	def getHypeRemoved(self, symbolDict, hypeRatio):
+		filtered = {}
+		
+		for symbol in symbolDict:
+			for dateString in symbolDict[symbol]:
+				# if symbol exists in hype, check the ratio
+				if symbol in self.symbolHype:
+					if dateString in self.symbolHype[symbol]:
+						ratio = self.symbolHype[symbol][dateString] / symbolDict[symbol][dateString]
+						if (ratio > hypeRatio):
+							continue # was seen in to many all caps sentences
 
-	def debug(self):
-		print(self.nyseSymbols)
+				self.feedSymbolDict(symbol, dateString, filtered, symbolDict[symbol][dateString])
+
+		return filtered
+
+	def getMinCount(self, symbolDict, minCount):
+		filtered = {}
+
+		for symbol in symbolDict:
+			for dateString in symbolDict[symbol]:
+				if (symbolDict[symbol][dateString] >= minCount):
+					self.feedSymbolDict(symbol, dateString, filtered, symbolDict[symbol][dateString])
+
+		return filtered
