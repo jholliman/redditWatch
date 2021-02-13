@@ -6,6 +6,7 @@ from datetime import datetime, timedelta;
 
 from wallstreetbots_data import Data
 from wallsteetsbots_filter import Filter
+from wallstreetbots_visualize import Visualize
 
 # SET UP ###################################################################
 
@@ -57,4 +58,8 @@ for submission in wsb.new(limit=100):
 data.save()
 symbolCounts = data.getHypeRemoved(data.symbolCounts, 0.2)
 symbolCounts = data.getMinCount(symbolCounts, 3)
-print(symbolCounts)
+#print(symbolCounts)
+
+
+visual = Visualize(datetime.today().strftime('%Y-%m-%d'),data, reddit)
+reportTest = visual.makeReport()#makes report in sub directory
