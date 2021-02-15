@@ -1,7 +1,6 @@
 import praw
 import csv
 import os
-import os.path
 
 from datetime import datetime, timedelta;
 
