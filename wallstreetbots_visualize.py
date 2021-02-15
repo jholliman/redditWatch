@@ -1,5 +1,4 @@
 import pandas as pd
-from collections import Counter
 import matplotlib.pyplot as plt
 import os
 import shutil
@@ -7,7 +6,7 @@ import shutil
 from datetime import datetime
 
 from wallstreetbots_data import Data
-from wallsteetsbots_filter import Filter
+from wallstreetbots_filter import Filter
 
 class Visualize:
     def __init__(self, date, data, reddit):#need to pass it current date, data instance, reddit instance

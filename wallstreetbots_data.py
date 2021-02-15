@@ -1,40 +1,45 @@
 import json
+import os
 
 from nltk import tokenize
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 from datetime import datetime, timedelta;
 
-from wallsteetsbots_filter import Filter
+from wallstreetbots_filter import Filter
 
 class Data:
 	# this is a dict of symbol: company name
 	nyseSymbols = {}
 
+	# last polled timestamp (int)
+	lastPolled = 0
+
 	# actual data
 	symbolCounts = {}
 	symbolSentiments = {}
 	symbolHype = {}
-	commentsLog = []
+
 
 
 	def __init__(self, nyseSymbols):
 		self.nyseSymbols = nyseSymbols
 
 	def load(self):
-		with open('database.json', 'r') as f:
-			combinedObject = json.load(f)
-			self.symbolCounts = combinedObject['symbolCounts']
-			self.symbolSentiments = combinedObject['symbolSentiments']
-			self.symbolHype = combinedObject['symbolHype']
-			self.commentsLog = combinedObject['commentsLog']
+		if os.path.exists('database.json'):
+			with open('database.json', 'r') as f:
+				combinedObject = json.load(f)
+				self.symbolCounts = combinedObject['symbolCounts']
+				self.symbolSentiments = combinedObject['symbolSentiments']
+				self.symbolHype = combinedObject['symbolHype']
+				self.lastPolled = combinedObject['lastPolled']
 
 	def save(self):
 		combinedObject = {}
 		combinedObject['symbolCounts'] = self.symbolCounts
 		combinedObject['symbolSentiments'] = self.symbolSentiments
 		combinedObject['symbolHype'] = self.symbolHype
-		combinedObject['commentsLog'] = self.commentsLog
+		combinedObject['lastPolled'] = self.lastPolled
 		
 		with open('database.json', 'w') as f:
 			json.dump(combinedObject, f, indent=4)
@@ -54,7 +59,7 @@ class Data:
 		symbolDict[symbol][dateString] += count
 
 
-	def processSymbols(self, comment, commentsAdded):
+	def processSymbols(self, comment):
 		tokenized = tokenize.word_tokenize(comment.body)
 		
 		# comment date (todo localtime)
@@ -63,23 +68,14 @@ class Data:
 		# is all caps?
 		hype = Filter.isCaps(comment.body, 0.8)
 
-		#add comment ID to log of comment IDs
-		if comment.id in self.commentsLog:
-			pass
-		else:
-			commentsAdded += 1
-			self.commentsLog.append(comment.id)
-			
-		
-			for word in tokenized:
-				if (word in self.nyseSymbols.keys()):
-					self.feedSymbolDict(word, dateString, self.symbolCounts)
+		for word in tokenized:
+			word = word.lstrip('$') # remove a leading $ so we can catch "$GME"
 
-					if hype:
-						self.feedSymbolDict(word, dateString, self.symbolHype)
-		
-		return commentsAdded
+			if (word in self.nyseSymbols.keys()):
+				self.feedSymbolDict(word, dateString, self.symbolCounts)
 
+				if hype:
+					self.feedSymbolDict(word, dateString, self.symbolHype)
 
 
 	def getHypeRemoved(self, symbolDict, hypeRatio):

@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta;
 
 from wallstreetbots_data import Data
-from wallsteetsbots_filter import Filter
+from wallstreetbots_filter import Filter
 from wallstreetbots_visualize import Visualize
 
 # SET UP ###################################################################
@@ -27,29 +27,22 @@ with open('stonks.csv') as csv_file:
 
 # create our data object and load it with the nyse symbols
 data = Data(nyseSymbols)
-# this is how you would load the existing database to add to
-# this is commented out for debug, because we have no way of checking if we're adding the same data again
-import os.path
-
-if os.path.isfile('database.json'):
-    data.load()
-    print ("Found existing WSB database")
-else:
-    pass
-
-  
-
+data.load()
 ############################################################################
 
-# only allow posts newer than 24hr ago
-startDateTime = (datetime.now() - timedelta(hours=24))
-commentsAdded = 0
+# only allow posts newer than the last polled time
+startDateTime = datetime.fromtimestamp(data.lastPolled)
+if (data.lastPolled == 0):
+    # if lastPolled is 0 (unset) then grab posts newer than 24hr ago
+    startDateTime = (datetime.now() - timedelta(hours=24))
 
 # this is the main processing loop for submissions
 for submission in wsb.new(limit=100):
-    timePosted = datetime.utcfromtimestamp(submission.created_utc) - timedelta(hours=6) # utc -> central
-    
+    timePosted = datetime.utcfromtimestamp(submission.created_utc) - timedelta(hours=6) # utc -> central    
+
     if (timePosted > startDateTime):
+        print("submission id: %s\t%s" % (submission.id, timePosted))
+        
         # FILTERING
         if (not Filter.minScore(submission, 2)): # reject score < 2
             continue
@@ -61,14 +54,16 @@ for submission in wsb.new(limit=100):
             if (not Filter.hasBody(comment)):
                 continue
 
-            commentsAdded = data.processSymbols(comment, commentsAdded)
+            data.processSymbols(comment)
+    else:
+        break
 
+data.lastPolled = datetime.now().timestamp()
 data.save()
-print(str(commentsAdded) + " comments added to log")
 symbolCounts = data.getHypeRemoved(data.symbolCounts, 0.2)
 symbolCounts = data.getMinCount(symbolCounts, 3)
-#print(symbolCounts)
+print(symbolCounts)
 
 
-visual = Visualize(datetime.today().strftime('%Y-%m-%d'),data, reddit)
-reportTest = visual.makeReport()#makes report in sub directory
+# visual = Visualize(datetime.today().strftime('%Y-%m-%d'),data, reddit)
+# reportTest = visual.makeReport()#makes report in sub directory
