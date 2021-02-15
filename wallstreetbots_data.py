@@ -15,6 +15,7 @@ class Data:
 	symbolCounts = {}
 	symbolSentiments = {}
 	symbolHype = {}
+	commentsLog = []
 
 
 	def __init__(self, nyseSymbols):
@@ -26,12 +27,14 @@ class Data:
 			self.symbolCounts = combinedObject['symbolCounts']
 			self.symbolSentiments = combinedObject['symbolSentiments']
 			self.symbolHype = combinedObject['symbolHype']
+			self.commentsLog = combinedObject['commentsLog']
 
 	def save(self):
 		combinedObject = {}
 		combinedObject['symbolCounts'] = self.symbolCounts
 		combinedObject['symbolSentiments'] = self.symbolSentiments
 		combinedObject['symbolHype'] = self.symbolHype
+		combinedObject['commentsLog'] = self.commentsLog
 		
 		with open('database.json', 'w') as f:
 			json.dump(combinedObject, f, indent=4)
@@ -51,22 +54,32 @@ class Data:
 		symbolDict[symbol][dateString] += count
 
 
-	def processSymbols(self, comment):
+	def processSymbols(self, comment, commentsAdded):
 		tokenized = tokenize.word_tokenize(comment.body)
-
+		
 		# comment date (todo localtime)
 		dateString = (datetime.utcfromtimestamp(comment.created_utc) - timedelta(hours=6)).date().isoformat()
 
 		# is all caps?
 		hype = Filter.isCaps(comment.body, 0.8)
 
-		# process counts
-		for word in tokenized:
-			if (word in self.nyseSymbols.keys()):
-				self.feedSymbolDict(word, dateString, self.symbolCounts)
+		#add comment ID to log of comment IDs
+		if comment.id in self.commentsLog:
+			pass
+		else:
+			commentsAdded += 1
+			self.commentsLog.append(comment.id)
+			
+		
+			for word in tokenized:
+				if (word in self.nyseSymbols.keys()):
+					self.feedSymbolDict(word, dateString, self.symbolCounts)
 
-				if hype:
-					self.feedSymbolDict(word, dateString, self.symbolHype)
+					if hype:
+						self.feedSymbolDict(word, dateString, self.symbolHype)
+		
+		return commentsAdded
+
 
 
 	def getHypeRemoved(self, symbolDict, hypeRatio):

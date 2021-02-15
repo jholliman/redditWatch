@@ -29,12 +29,21 @@ with open('stonks.csv') as csv_file:
 data = Data(nyseSymbols)
 # this is how you would load the existing database to add to
 # this is commented out for debug, because we have no way of checking if we're adding the same data again
-# data.load()
-############################################################################
+import os.path
 
+if os.path.isfile('database.json'):
+    data.load()
+    print ("Found existing WSB database")
+else:
+    pass
+
+  
+
+############################################################################
 
 # only allow posts newer than 24hr ago
 startDateTime = (datetime.now() - timedelta(hours=24))
+commentsAdded = 0
 
 # this is the main processing loop for submissions
 for submission in wsb.new(limit=100):
@@ -47,15 +56,15 @@ for submission in wsb.new(limit=100):
 
         # FLAGS
         isDailyDiscussion = (submission.link_flair_text == "Daily Discussion")
-
         for comment in submission.comments:
             # FILTERING
             if (not Filter.hasBody(comment)):
                 continue
 
-            data.processSymbols(comment)
+            commentsAdded = data.processSymbols(comment, commentsAdded)
 
 data.save()
+print(str(commentsAdded) + " comments added to log")
 symbolCounts = data.getHypeRemoved(data.symbolCounts, 0.2)
 symbolCounts = data.getMinCount(symbolCounts, 3)
 #print(symbolCounts)
