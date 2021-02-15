@@ -55,20 +55,23 @@ class Data:
 
 
 	def processSymbols(self, comment, commentsAdded):
-		tokenized = tokenize.word_tokenize(comment.body)
-		
-		# comment date (todo localtime)
-		dateString = (datetime.utcfromtimestamp(comment.created_utc) - timedelta(hours=6)).date().isoformat()
 
-		# is all caps?
-		hype = Filter.isCaps(comment.body, 0.8)
-
-		#add comment ID to log of comment IDs
+		#check if comment is already in log 
 		if comment.id in self.commentsLog:
 			pass
+		#if not, process comment and ++ the comments added counter
 		else:
+
+			tokenized = tokenize.word_tokenize(comment.body)
+		
+			# comment date (todo localtime)
+			dateString = (datetime.utcfromtimestamp(comment.created_utc) - timedelta(hours=6)).date().isoformat()
+
+			# is all caps?
+			hype = Filter.isCaps(comment.body, 0.8)
+
 			commentsAdded += 1
-			self.commentsLog.append(comment.id)
+			self.commentsLog.append(comment.id)#add comment ID to log of comment IDs
 			
 		
 			for word in tokenized:
@@ -78,7 +81,7 @@ class Data:
 					if hype:
 						self.feedSymbolDict(word, dateString, self.symbolHype)
 		
-		return commentsAdded
+		return commentsAdded#return the running total of added comments
 
 
 

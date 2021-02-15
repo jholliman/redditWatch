@@ -1,6 +1,7 @@
 import praw
 import csv
 import os
+import os.path
 
 from datetime import datetime, timedelta;
 
@@ -27,9 +28,8 @@ with open('stonks.csv') as csv_file:
 
 # create our data object and load it with the nyse symbols
 data = Data(nyseSymbols)
-# this is how you would load the existing database to add to
-# this is commented out for debug, because we have no way of checking if we're adding the same data again
-import os.path
+
+#check if there is an existing database and load it if yes 
 
 if os.path.isfile('database.json'):
     data.load()
