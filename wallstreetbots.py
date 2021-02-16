@@ -62,8 +62,12 @@ data.lastPolled = datetime.now().timestamp()
 data.save()
 symbolCounts = data.getHypeRemoved(data.symbolCounts, 0.2)
 symbolCounts = data.getMinCount(symbolCounts, 3)
-print(symbolCounts)
+#print(symbolCounts)
 
 
-# visual = Visualize(datetime.today().strftime('%Y-%m-%d'),data, reddit)
-# reportTest = visual.makeReport()#makes report in sub directory
+visual = Visualize(data, reddit)
+testReport = visual.makeReport()
+
+
+
+
