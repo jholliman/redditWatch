@@ -87,7 +87,7 @@ class Visualize:
 
                 #if symbol mentioned that day, replace zero with number of mentions
                 for date in intersection:
-                    metricArray[intersection.index(date)] = metric[symbol][date]
+                    metricArray[dateStringList.index(date)] = metric[symbol][date]
 
                 #reverse array so latest day is on far right of graph
                 periodDict.append(list(reversed(metricArray)))
