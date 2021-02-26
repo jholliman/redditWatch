@@ -6,7 +6,7 @@ from datetime import datetime, timedelta;
 
 from wallstreetbots_data import Data
 from wallstreetbots_filter import Filter
-from wallstreetbots_visualize import Visualize
+# from wallstreetbots_visualize import Visualize
 
 # SET UP ###################################################################
 
@@ -27,7 +27,9 @@ with open('stonks.csv') as csv_file:
 
 # create our data object and load it with the nyse symbols
 data = Data(nyseSymbols)
-data.load()
+# data.load()
+data.loadFromFirebase()
+print(data.getJson())
 ############################################################################
 
 # only allow posts newer than the last polled time
@@ -60,13 +62,14 @@ for submission in wsb.new(limit=100):
 
 data.lastPolled = datetime.now().timestamp()
 data.save()
+data.putToFirebase()
 symbolCounts = data.getHypeRemoved(data.symbolCounts, 0.2)
 symbolCounts = data.getMinCount(symbolCounts, 3)
 #print(symbolCounts)
 
 
-visual = Visualize(data, reddit)
-testReport = visual.makeReport()
+#visual = Visualize(data, reddit)
+#testReport = visual.makeReport()
 
 
 

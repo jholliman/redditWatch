@@ -1,5 +1,6 @@
 import json
 import os
+import requests
 
 from nltk import tokenize
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -9,6 +10,8 @@ from datetime import datetime, timedelta;
 from wallstreetbots_filter import Filter
 
 class Data:
+	dbsecret = 'Vlrciba3zM5NbVfOnbNQS0F9juEhKMOTkt1Cmh9h'
+
 	# this is a dict of symbol: company name
 	nyseSymbols = {}
 
@@ -29,20 +32,44 @@ class Data:
 		if os.path.exists('database.json'):
 			with open('database.json', 'r') as f:
 				combinedObject = json.load(f)
-				self.symbolCounts = combinedObject['symbolCounts']
-				self.symbolSentiments = combinedObject['symbolSentiments']
-				self.symbolHype = combinedObject['symbolHype']
-				self.lastPolled = combinedObject['lastPolled']
+				self.loadJson(combinedObject)
+
+	def loadJson(self, o):
+		if ('symbolCounts' in o):
+			self.symbolCounts = o['symbolCounts']
+		if ('symbolSentiments' in o):
+			self.symbolSentiments = o['symbolSentiments']
+		if ('symbolHype' in o):
+			self.symbolHype = o['symbolHype']
+		if ('lastPolled' in o):
+			self.lastPolled = o['lastPolled']
 
 	def save(self):
+		with open('database.json', 'w') as f:
+			json.dump(self.getJson(), f, indent=4)
+
+	def getJson(self):
 		combinedObject = {}
 		combinedObject['symbolCounts'] = self.symbolCounts
 		combinedObject['symbolSentiments'] = self.symbolSentiments
 		combinedObject['symbolHype'] = self.symbolHype
 		combinedObject['lastPolled'] = self.lastPolled
+
+		return combinedObject
+
+	def putToFirebase(self):
+		url = 'https://thewallstreetbots-default-rtdb.firebaseio.com/.json'
+		url += '?auth=%s' % (self.dbsecret)
+		response = requests.put(url, json.dumps(self.getJson()))
+
+	def loadFromFirebase(self):
+		url = 'https://thewallstreetbots-default-rtdb.firebaseio.com/.json'
+		url += '?auth=%s' % (self.dbsecret)
+
+		response = requests.get(url)
 		
-		with open('database.json', 'w') as f:
-			json.dump(combinedObject, f, indent=4)
+		if (response.status_code == requests.codes.ok):
+			self.loadJson(json.loads(response.text))
 
 
 	# helper function for adding to the nested dicts
