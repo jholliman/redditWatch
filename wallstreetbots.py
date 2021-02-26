@@ -28,7 +28,7 @@ with open('stonks.csv') as csv_file:
 # create our data object and load it with the nyse symbols
 data = Data(nyseSymbols)
 # data.load()
-data.loadFromFirebase()
+data.getFromFirebase()
 print(data.getJson())
 ############################################################################
 

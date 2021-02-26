@@ -28,12 +28,6 @@ class Data:
 	def __init__(self, nyseSymbols):
 		self.nyseSymbols = nyseSymbols
 
-	def load(self):
-		if os.path.exists('database.json'):
-			with open('database.json', 'r') as f:
-				combinedObject = json.load(f)
-				self.loadJson(combinedObject)
-
 	def loadJson(self, o):
 		if ('symbolCounts' in o):
 			self.symbolCounts = o['symbolCounts']
@@ -44,10 +38,6 @@ class Data:
 		if ('lastPolled' in o):
 			self.lastPolled = o['lastPolled']
 
-	def save(self):
-		with open('database.json', 'w') as f:
-			json.dump(self.getJson(), f, indent=4)
-
 	def getJson(self):
 		combinedObject = {}
 		combinedObject['symbolCounts'] = self.symbolCounts
@@ -57,12 +47,22 @@ class Data:
 
 		return combinedObject
 
+	def load(self):
+		if os.path.exists('database.json'):
+			with open('database.json', 'r') as f:
+				combinedObject = json.load(f)
+				self.loadJson(combinedObject)
+
+	def save(self):
+		with open('database.json', 'w') as f:
+			json.dump(self.getJson(), f, indent=4)
+
 	def putToFirebase(self):
 		url = 'https://thewallstreetbots-default-rtdb.firebaseio.com/.json'
 		url += '?auth=%s' % (self.dbsecret)
 		response = requests.put(url, json.dumps(self.getJson()))
 
-	def loadFromFirebase(self):
+	def getFromFirebase(self):
 		url = 'https://thewallstreetbots-default-rtdb.firebaseio.com/.json'
 		url += '?auth=%s' % (self.dbsecret)
 

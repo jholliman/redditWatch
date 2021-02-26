@@ -3,3 +3,5 @@
 .vs/slnx.sqlite
 .vs/VSWorkspaceState.json
 *.pyc
+.vs/PythonSettings.json
+.vs/ProjectSettings.json

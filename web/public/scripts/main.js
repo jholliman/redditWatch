@@ -25,17 +25,7 @@ WallStreetBots.prototype.checkSetup = function() {
 };
 
 WallStreetBots.prototype.onAuthStateChanged = function(user) {
-	/*
-	if (user) {
-		  this.button_signin.style.display = 'none';
-		  this.data_section.style.display = '';
-		  
-		  this.updateDataRange();
-	  } else {
-		  this.button_signin.style.display = '';
-		  this.data_section.style.display = 'none';
-	}
-	*/
+	
 };
 
 window.onload = function() {
